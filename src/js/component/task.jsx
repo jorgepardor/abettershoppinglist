@@ -1,22 +1,80 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+
+let temporalData = [];
+
+const url = "https://assets.breatheco.de/apis/fake/todos/user/jorgepardor";
 
 //create your first component
 const Task = () => {
 	const [task, setTask] = useState([]);
 	const [text, setText] = useState("");
 
+	useEffect(() => {
+		fetch(url)
+			.then((resp) => {
+				console.log(resp.ok); // will be true if the response is successfull
+				console.log(resp.status); // the status code = 200 or code = 400 etc.
+				return resp.json(); // (returns promise) will try to parse the result as json as return a promise that you can .then for results
+			})
+			.then((data) => {
+				temporalData = data;
+				setTask(temporalData);
+				console.log(data); //this will print on the console the exact object received from the server
+			})
+			.catch((error) => {
+				//error handling
+				console.log(error);
+			});
+	}, []);
+
 	const handleChange = (event) => {
-		event.preventDefault();
 		console.log(event.target.value);
 		setText(event.target.value);
 	};
 
-	const Delete = (item) =>
-		setTask(task.filter((deleteMe) => item != deleteMe));
-	// console.log(index);
-
 	const submit = () => {
-		setTask([...task, text]);
+		console.log(task);
+		fetch(url, {
+			method: "PUT",
+			body: JSON.stringify([...task, { label: text, done: false }]),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		})
+			.then((resp) => {
+				if (resp.ok) {
+					console.log("se ha ejecutado correctamente");
+					setTask([...task, { label: text, done: false }]);
+					setText("");
+				} else {
+					console.log("nope, esto no ha salido bien");
+				}
+			})
+			.catch((error) => {
+				//error handling
+				console.log(error);
+			});
+	};
+
+	const byebye = (newList) => {
+		fetch(url, {
+			method: "PUT",
+			body: JSON.stringify(newList),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		})
+			.then((resp) => {
+				if (resp.ok) {
+					console.log("se ha ejecutado correctamente");
+				} else {
+					console.log("nope, esto no ha salido bien");
+				}
+			})
+			.catch((error) => {
+				//error handling
+				console.log(error);
+			});
 	};
 
 	return (
@@ -35,11 +93,14 @@ const Task = () => {
 					aria-label="List your ingredients here"
 					aria-describedby="button-addon1"
 					onChange={handleChange}
+					value={text}
 				/>
 				<button
 					className="btn btn-outline-success btn-sm"
 					id="button-addon2"
-					onClick={submit}>
+					onClick={() => {
+						submit();
+					}}>
 					Add item ✔️
 				</button>
 			</div>
@@ -48,13 +109,22 @@ const Task = () => {
 				{task.map((value, index) => (
 					<ul className="list-group px-2">
 						<li
-							key={value}
+							key={value.index}
 							className="list-group-item d-flex justify-content-between mb-2">
-							{value}
+							{value.label}
 
 							<button
 								className="btn btn-outline-danger btn-sm"
-								onClick={() => Delete(value)}>
+								onClick={() => {
+									const newList = task.filter(
+										(elem) => elem.label != value.label
+									);
+									temporalData = newList;
+									console.log(newList);
+
+									setTask(temporalData);
+									byebye(newList);
+								}}>
 								❌
 							</button>
 						</li>
